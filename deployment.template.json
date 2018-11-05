@@ -1,0 +1,85 @@
+{
+  "modulesContent": {
+    "$edgeAgent": {
+      "properties.desired": {
+        "schemaVersion": "1.0",
+        "runtime": {
+          "type": "docker",
+          "settings": {
+            "minDockerVersion": "v1.25",
+            "loggingOptions": "",
+            "registryCredentials": {
+              "mycontainers": {
+                "username": "$mycontainers_username",
+                "password": "$mycontainers_password",
+                "address": "$mycontainers_address"
+              }
+            }
+          }
+        },
+        "systemModules": {
+          "edgeAgent": {
+            "type": "docker",
+            "settings": {
+              "image": "mcr.microsoft.com/azureiotedge-agent:1.0",
+              "createOptions": "{}"
+            }
+          },
+          "edgeHub": {
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "mcr.microsoft.com/azureiotedge-hub:1.0",
+              "createOptions": "{\"HostConfig\":{\"PortBindings\":{\"5671/tcp\":[{\"HostPort\":\"5671\"}], \"8883/tcp\":[{\"HostPort\":\"8883\"}],\"443/tcp\":[{\"HostPort\":\"443\"}]}}}"
+            }
+          }
+        },
+        "modules": {
+          "tempSensor": {
+            "version": "1.0",
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "mcr.microsoft.com/azureiotedge-simulated-temperature-sensor:1.0",
+              "createOptions": "{}"
+            }
+          },
+          "blobstoremodule": {
+            "version": "1.0",
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "mcr.microsoft.com/azure-blob-storage:1.0.1-linux-amd64",
+              "createOptions": "{\"Env\": [\"LOCAL_STORAGE_ACCOUNT_NAME=metadatastore\",\"LOCAL_STORAGE_ACCOUNT_KEY=iYMKd+VQXJDxNwGInLuzl9tA5oUlxTcZnIVhfcGoUnRkXgGl7CROA7fYjOvXd+qFulujnhqjsdtYZpfNHqAVPg==\"],\"HostConfig\": {\"Binds\": [\"/srv/blobdata:/blobroot\"],\"PortBindings\": {\"11002/tcp\": [{\"HostPort\":\"11002\"}]}}}"
+            }
+          },
+          "blobWriterModule": {
+            "version": "1.0",
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "${MODULES.blobWriterModule.amd64}",
+              "createOptions": "{\"Env\": [\"storageconnectionstring=DefaultEndpointsProtocol=http;BlobEndpoint=http://blobstoremodule:11002/metadatastore;AccountName=metadatastore;AccountKey=iYMKd+VQXJDxNwGInLuzl9tA5oUlxTcZnIVhfcGoUnRkXgGl7CROA7fYjOvXd+qFulujnhqjsdtYZpfNHqAVPg==\", \"storageContainername=samplecontainer\"]}"
+            }
+          }
+        }
+      }
+    },
+    "$edgeHub": {
+      "properties.desired": {
+        "schemaVersion": "1.0",
+        "routes": {
+          "blobWriterModuleToIoTHub": "FROM /messages/modules/blobWriterModule/outputs/* INTO $upstream",
+          "sensorToblobWriterModule": "FROM /messages/modules/tempSensor/outputs/temperatureOutput INTO BrokeredEndpoint(\"/modules/blobWriterModule/inputs/input1\")"
+        },
+        "storeAndForwardConfiguration": {
+          "timeToLiveSecs": 7200
+        }
+      }
+    }
+  }
+}
