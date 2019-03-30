@@ -83,7 +83,7 @@
             "status": "running",
             "restartPolicy": "always",
             "settings": {
-              "image": "${MODULES.blobWriterModule}",
+              "image": "${MODULES.blobWriterModule.debug}",
               "createOptions": "{\"Env\": [\"storageconnectionstring=DefaultEndpointsProtocol=http;BlobEndpoint=http://blobstoremodule:11002/metadatastore;AccountName=metadatastore;AccountKey=iYMKd+VQXJDxNwGInLuzl9tA5oUlxTcZnIVhfcGoUnRkXgGl7CROA7fYjOvXd+qFulujnhqjsdtYZpfNHqAVPg==\", \"storageContainername=samplecontainer\"]}"
             }
           }
