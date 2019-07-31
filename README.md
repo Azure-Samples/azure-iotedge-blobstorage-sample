@@ -1,3 +1,12 @@
+---
+page_type: sample
+languages:
+- csharp
+products:
+- azure
+- azure-iot-edge
+description: "Simple sample showing how to use local blob storage with Azure IoT Edge."
+---
 # Azure IoT Edge Blob storage sample
 
 Simple sample showing how to use [local blob storage](https://docs.microsoft.com/en-us/azure/iot-edge/how-to-store-data-blob) with [Azure IoT Edge](https://azure.microsoft.com/en-us/services/iot-edge/) that's currently in Public Preview (October 2018)
