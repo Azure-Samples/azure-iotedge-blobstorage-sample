@@ -67,14 +67,31 @@
               "createOptions": "{}"
             }
           },
-          "blobstoremodule": {
+          "azureblobstorageoniotedge": {
             "version": "1.0",
             "type": "docker",
             "status": "running",
             "restartPolicy": "always",
             "settings": {
-              "image": "mcr.microsoft.com/azure-blob-storage:1.0.1-linux-amd64",
-              "createOptions": "{\"Env\": [\"LOCAL_STORAGE_ACCOUNT_NAME=metadatastore\",\"LOCAL_STORAGE_ACCOUNT_KEY=iYMKd+VQXJDxNwGInLuzl9tA5oUlxTcZnIVhfcGoUnRkXgGl7CROA7fYjOvXd+qFulujnhqjsdtYZpfNHqAVPg==\"],\"HostConfig\": {\"Binds\": [\"/srv/blobdata:/blobroot\"],\"PortBindings\": {\"11002/tcp\": [{\"HostPort\":\"11002\"}]}}}"
+              "image": "mcr.microsoft.com/azure-blob-storage:latest",
+              "createOptions": {
+                "Env": [
+                  "LOCAL_STORAGE_ACCOUNT_NAME=metadatastore",
+                  "LOCAL_STORAGE_ACCOUNT_KEY=iYMKd+VQXJDxNwGInLuzl9tA5oUlxTcZnIVhfcGoUnRkXgGl7CROA7fYjOvXd+qFulujnhqjsdtYZpfNHqAVPg=="
+                ],
+                "HostConfig": {
+                  "Binds": [
+                    "blobvolume:/blobroot"
+                  ],
+                  "PortBindings": {
+                    "11002/tcp": [
+                      {
+                        "HostPort": "11002"
+                      }
+                    ]
+                  }
+                }
+              }
             }
           },
           "blobWriterModule": {
@@ -84,7 +101,12 @@
             "restartPolicy": "always",
             "settings": {
               "image": "${MODULES.blobWriterModule}",
-              "createOptions": "{\"Env\": [\"storageconnectionstring=DefaultEndpointsProtocol=http;BlobEndpoint=http://blobstoremodule:11002/metadatastore;AccountName=metadatastore;AccountKey=iYMKd+VQXJDxNwGInLuzl9tA5oUlxTcZnIVhfcGoUnRkXgGl7CROA7fYjOvXd+qFulujnhqjsdtYZpfNHqAVPg==\", \"storageContainername=samplecontainer\"]}"
+              "createOptions": {
+                "Env": [
+                  "storageconnectionstring=DefaultEndpointsProtocol=http;BlobEndpoint=http://azureblobstorageoniotedge:11002/metadatastore;AccountName=metadatastore;AccountKey=iYMKd+VQXJDxNwGInLuzl9tA5oUlxTcZnIVhfcGoUnRkXgGl7CROA7fYjOvXd+qFulujnhqjsdtYZpfNHqAVPg==",
+                  "storageContainername=samplecontainer"
+                ]
+              }
             }
           }
         }
@@ -99,6 +121,26 @@
         },
         "storeAndForwardConfiguration": {
           "timeToLiveSecs": 7200
+        }
+      }
+    },
+    "azureblobstorageoniotedge": {
+      "properties.desired": {
+        "deviceAutoDeleteProperties": {
+          "deleteOn": false,
+          "deleteAfterMinutes": 60,
+          "retainWhileUploading": false
+        },
+        "deviceToCloudUploadProperties": {
+          "uploadOn": false,
+          "uploadOrder": "NewestFirst",
+          "cloudStorageConnectionString": "",
+          "storageContainersForUpload": {
+            "none": {
+              "target": "none"
+            }
+          },
+          "deleteAfterUpload": true
         }
       }
     }
