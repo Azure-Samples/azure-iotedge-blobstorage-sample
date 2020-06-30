@@ -8,9 +8,9 @@ namespace blobWriterModule
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
+    using Azure.Storage.Blobs;
+    using Azure.Storage.Blobs.Models;
     using Microsoft.Azure.Devices.Client;
-    using Microsoft.WindowsAzure.Storage;
-    using Microsoft.WindowsAzure.Storage.Blob;
 
     class Program
     {
@@ -94,63 +94,58 @@ namespace blobWriterModule
             string storageConnectionString = Environment.GetEnvironmentVariable("storageconnectionstring");
             string storageContainername = Environment.GetEnvironmentVariable("storageContainername");
 
-            CloudStorageAccount storageAccount = null;
-            CloudBlobContainer cloudBlobContainer = null;
+            BlobServiceClient blobServiceClient = null;
+            BlobContainerClient Container = null;
             string sourceFile = null;
 
-            // Check whether the connection string can be parsed.
-            if (CloudStorageAccount.TryParse(storageConnectionString, out storageAccount))
+            try
             {
+                blobServiceClient = new BlobServiceClient(storageConnectionString);
+            }catch(Exception)
+            {
+                Console.WriteLine(
+                   "A connection string has not been defined in the system environment variables. " +
+                   "Add a environment variable named 'storageconnectionstring' with your storage " +
+                   "connection string as a value.");
+                return;
+            }
+            // Check whether the connection string can be parsed.
+           
                 // We definetly should check for a valid container name. Very common error is to use upper case characters
-                if (storageContainername == null || storageContainername.Length == 0 /*| storageContainername.Any(char.IsUpper)*/) {
-                    storageContainername = "samplecontainer";
-                }
+            if (storageContainername == null || storageContainername.Length == 0 /*| storageContainername.Any(char.IsUpper)*/) {
+                storageContainername = "samplecontainer";
+            }
 
-                try
-                {
-                    // Create the CloudBlobClient that represents the Blob storage endpoint for the storage account.
-                    CloudBlobClient cloudBlobClient = storageAccount.CreateCloudBlobClient();
+            try
+            {
+                // Create a container called 'samplecontainer' and append a GUID value to it to make the name unique. 
+                Container = blobServiceClient.GetBlobContainerClient(storageContainername);
+                await Container.CreateIfNotExistsAsync();  
+                Console.WriteLine("Successfully created container '{storageContainername}'");
+                await Container.SetAccessPolicyAsync(PublicAccessType.Blob).ConfigureAwait(false);
+                Console.WriteLine($"Permissions set");
+                  
 
-                    // Create a container called 'samplecontainer' and append a GUID value to it to make the name unique. 
-                    cloudBlobContainer = cloudBlobClient.GetContainerReference(storageContainername);
-                    bool wasCreated = await cloudBlobContainer.CreateIfNotExistsAsync();
-                    if (wasCreated)
-                    {
-                        Console.WriteLine("Successfully created container '{storageContainername}'");
+                // Create a file in your local MyDocuments folder to upload to a blob.
+                string localPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                string localFileName = "MessageContents_" + DateTime.UtcNow.ToString("yyyy-MM-ddTHHmmss") + ".txt";
+                sourceFile = Path.Combine(localPath, localFileName);
+                // Write text to the file.
+                File.WriteAllText(sourceFile, messageString);
 
-                        var permissions = new BlobContainerPermissions { PublicAccess = BlobContainerPublicAccessType.Blob };
-                        await cloudBlobContainer.SetPermissionsAsync(permissions).ConfigureAwait(false);
-                        Console.WriteLine($"Permissions set");
-                    }
-
-                    // Create a file in your local MyDocuments folder to upload to a blob.
-                    string localPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-                    string localFileName = "MessageContents_" + DateTime.UtcNow.ToString("yyyy-MM-ddTHHmmss") + ".txt";
-                    sourceFile = Path.Combine(localPath, localFileName);
-                    // Write text to the file.
-                    File.WriteAllText(sourceFile, messageString);
-
-                    Console.WriteLine("Uploading to Blob storage as blob '{0}'", localFileName);
+                Console.WriteLine("Uploading to Blob storage as blob '{0}'", localFileName);
 
                     // Get a reference to the blob address, then upload the file to the blob.
                     // Use the value of localFileName for the blob name.
-                    CloudBlockBlob cloudBlockBlob = cloudBlobContainer.GetBlockBlobReference(localFileName);
-                    await cloudBlockBlob.UploadFromFileAsync(sourceFile);
-                }
-                catch (StorageException ex)
-                {
-                    Console.WriteLine("Error returned from the service: {0}", ex.Message);
-                } finally
-                {
-                    File.Delete(sourceFile);
-                }
+                BlobClient blobClient = Container.GetBlobClient(localFileName);
+                await blobClient.UploadAsync(sourceFile);
             }
-            else
+            catch (Exception ex)
             {
-                Console.WriteLine(
-                    "A connection string has not been defined in the system environment variables. " +
-                    "Add a environment variable named 'storageconnectionstring' with your storage " +
-                    "connection string as a value.");
+                Console.WriteLine("Error returned from the service: {0}", ex.Message);
+            } finally
+            {
+                File.Delete(sourceFile);
             }
         }
     }
